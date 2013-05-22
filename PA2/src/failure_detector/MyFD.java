@@ -193,6 +193,7 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 	}
 	
 	private String getIPAdressOfAllNics() {
+		//asdf
 		String IP = null;
 		try {
 			Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
