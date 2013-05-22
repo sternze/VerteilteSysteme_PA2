@@ -1,12 +1,14 @@
 package failure_detector.data;
 
+import java.io.Serializable;
 import java.net.InetAddress;
 
-public class Node {
+public class Node implements Serializable {
 
 	private String ServiceName;
 	private String IP;
 	private int port;
+	
 	public String getServiceName() {
 		return ServiceName;
 	}
@@ -24,7 +26,9 @@ public class Node {
 	}
 	public void setPort(int port) {
 		this.port = port;
+	}	
+	
+	public String getFullAddress() {
+		return IP + ":" + port;
 	}
-	
-	
 }

@@ -4,8 +4,10 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 
 import failure_detector.data.Node;
+import failure_detector.data.Response;
 
 public interface IMyFD extends Remote {
 
-	public String JoinRequest(Node caller) throws RemoteException;
+	public Response JoinRequest(Node caller) throws RemoteException;
+	public void Pulse(Response msg) throws RemoteException;
 }
