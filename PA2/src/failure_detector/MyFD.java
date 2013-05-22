@@ -3,6 +3,8 @@ package failure_detector;
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.NetworkInterface;
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.SocketException;
 import java.rmi.Naming;
@@ -11,6 +13,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Enumeration;
 
 import failure_detector.data.Node;
 import failure_detector.interfaces.IMyFD;
@@ -170,6 +173,44 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 	    }
 
 	    return false;
+	}
+	
+	private String getIPAdressOfNic(String NIC_Name) {
+		String IP = null;
+		try {
+			NetworkInterface ni = NetworkInterface.getByName(NIC_Name);
+			
+		    Enumeration<InetAddress> addresses = ni.getInetAddresses();
+		    while (addresses.hasMoreElements()){
+		        InetAddress current_addr = addresses.nextElement();
+		        if (current_addr.isLoopbackAddress() || !(current_addr instanceof Inet4Address))
+		        	continue;
+		        IP = current_addr.getHostAddress();
+		    }
+		} catch(Exception ex) { }
+		
+		return IP;
+	}
+	
+	private String getIPAdressOfAllNics() {
+		String IP = null;
+		try {
+			Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+			while (interfaces.hasMoreElements()){
+			    NetworkInterface current = interfaces.nextElement();
+			    System.out.println(current);
+			    if (!current.isUp() || current.isLoopback() || current.isVirtual()) continue;
+			    Enumeration<InetAddress> addresses = current.getInetAddresses();
+			    while (addresses.hasMoreElements()){
+			        InetAddress current_addr = addresses.nextElement();
+			        if (current_addr.isLoopbackAddress() || !(current_addr instanceof Inet4Address))
+			        	continue;
+			        IP = current_addr.getHostAddress();
+			    }
+			}
+		} catch(Exception ex) { }
+		
+		return IP;
 	}
 
 	@Override
