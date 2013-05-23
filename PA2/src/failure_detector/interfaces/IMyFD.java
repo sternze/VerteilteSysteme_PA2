@@ -10,4 +10,5 @@ public interface IMyFD extends Remote {
 
 	public Response JoinRequest(Node caller) throws RemoteException;
 	public void Pulse(Response msg) throws RemoteException;
+	public void ChangePulse(Node newPulse) throws RemoteException;
 }

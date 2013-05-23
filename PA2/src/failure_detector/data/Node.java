@@ -31,4 +31,19 @@ public class Node implements Serializable {
 	public String getFullAddress() {
 		return IP + ":" + port;
 	}
+	@Override
+	public boolean equals(Object obj) {
+		if (obj == null) {
+			return false;
+		} else {
+			Node n = (Node) obj;
+			if (!this.getFullAddress().equals(n.getFullAddress())) {
+				return false;
+			}
+		}
+		
+		return true;
+	}
+	
+	
 }

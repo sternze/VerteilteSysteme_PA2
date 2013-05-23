@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.SocketException;
@@ -40,6 +41,7 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 	private static Node third = null;
 	private static Node pulse = null;
 	
+	private static IMyFD pulseContact = null;
 	private static IMyFD contact = null;
 
 	protected MyFD() throws RemoteException {
@@ -98,19 +100,29 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 				ContactServiceName = args[2];
 			
 			try {
-	        	System.out.println("Starting Lookup");
+	        	System.out.println("Starting lookup for join");
 	        	contact = (IMyFD) Naming.lookup("rmi://" + ConnectionURI + "/" + ContactServiceName); 
 	        	System.out.println("Node found");
 	        	
 	        	System.out.println("contacting node " + ConnectionURI);
 	        	Response response = contact.JoinRequest(me);
 	        	
-	        	if (response.getSecond().equals(me)) {
-		        	first = response.getSecond();
-		        	pulse = response.getSecond();
-	        	} else if (response.getFirst().equals(me)) {
+	        	Node contactNode = new Node();
+	        	contactNode.setServiceName(ContactServiceName);
+	        	contactNode.setIP(ConnectionURI.split(":")[0]);
+	        	contactNode.setPort(Integer.parseInt(ConnectionURI.split(":")[1]));
+	        	
+	        	if (response.getFirst().equals(me) && response.getSecond().equals(contactNode)) {
+	        		first = contactNode;
+	        		pulse = contactNode;
+	        	} else if (response.getFirst().equals(me) && !response.getSecond().equals(contactNode)) {
+	        		// da bullshit!!!!!!
 	        		first = response.getSecond();
-	        		pulse = first;
+	        		second = contactNode;
+	        		pulse = contactNode;
+	        	} else {
+	        		pulse = contactNode;
+	        		first = response.getSecond();
 	        	}
 	        	
 	        	printStatus();
@@ -130,9 +142,43 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 			System.out.println("I'm the first one");
 		}
 		
+		
 		Thread generator = new Thread() {
     		public void run() {
     			System.out.println("started pulse generator thread");
+    			while (true) {
+    				if (pulse != null) {
+	    				synchronized (pulse) {
+							if (pulseContact == null) {
+			    				try {
+		    						pulseContact =  (IMyFD) Naming.lookup("rmi://" + pulse.getFullAddress() + "/" + ContactServiceName);
+		    						System.out.println("changed pulsecontact");
+								} catch (MalformedURLException | RemoteException | NotBoundException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								} 
+							}
+								
+							synchronized (pulseContact) {
+								Response msg = new Response();
+								msg.setFirst(first);
+								msg.setSecond(second);
+								try {
+									pulseContact.Pulse(msg);
+									System.out.println("sent pulse to " + pulse.getFullAddress());
+									
+									Thread.sleep(4000);
+								} catch (RemoteException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								} catch (InterruptedException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+			    			}
+						}
+					}
+    			}
     			
     		}
     	};
@@ -245,26 +291,58 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 	}
 
 	@Override
-	public synchronized Response JoinRequest(Node caller) throws RemoteException {
+	public Response JoinRequest(Node caller) throws RemoteException {
 		Response response = new Response();
 		
 		System.out.println("getting join request from " + caller.getFullAddress());
 		
-		if (first.equals(me) && second.equals(me) && third.equals(me)) {
-			pulse = caller;
-			first = caller;
+		if (third.equals(me) && second.equals(me)) {
+			if (first.equals(me)) {
+				System.out.println("first join request");
+				pulse = caller;
+				first = caller;
+			} else {
+				System.out.println("second join request");
+				
+				try {
+					IMyFD prevFirst = (IMyFD) Naming.lookup("rmi://" + first.getFullAddress() + "/" + first.getServiceName());
+					
+					prevFirst.ChangePulse(caller);
+					
+					prevFirst = null;
+				} catch (MalformedURLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (NotBoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				second = first;
+				first = caller;
+			}
+		} else {
+			try {
+				IMyFD prevFirst = (IMyFD) Naming.lookup("rmi://" + first.getFullAddress() + "/" + first.getServiceName());
+				
+				prevFirst.ChangePulse(caller);
+				
+				prevFirst = null;
+			} catch (MalformedURLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (NotBoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			
-			response.setFirst(first);
-			response.setSecond(second);
-		} else if (!first.equals(me) && second.equals(me) && third.equals(me)) {
+			third = second;
 			second = first;
 			first = caller;
-			
-			response.setFirst(first);
-			response.setSecond(second);
-		} else if (!first.equals(me) && !second.equals(me) && third.equals(me)) {
-			
 		}
+		
+		response.setFirst(first);
+		response.setSecond(second);
 		
 		printStatus();
 		
@@ -273,15 +351,45 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 
 	@Override
 	public void Pulse(Response msg) throws RemoteException {
-		// TODO Auto-generated method stub
+		System.out.println("got pulse");
+		
+		if (msg.getFirst().equals(me)) {
+			// only two nodes
+		} else if (msg.getSecond().equals(me) && third.equals(me) && !msg.getFirst().equals(pulse) && !msg.getFirst().equals(second)) {
+			pulse = msg.getFirst();
+			second = msg.getFirst();
+			printStatus();
+		} else {
+			second = msg.getFirst();
+			third = msg.getSecond();
+			printStatus();
+		}
 	}
 
-	private static synchronized void printStatus() {
+	private static void printStatus() {
 		System.out.println("my status (" + me.getFullAddress() +") {");
 		System.out.println("\t first: " + first.getFullAddress());
 		System.out.println("\t second: " + second.getFullAddress());
 		System.out.println("\t third: " + third.getFullAddress());
 		System.out.println("\t pulse: " + pulse.getFullAddress());
 		System.out.println("}");
+	}
+
+	@Override
+	public void ChangePulse(Node newPulse) throws RemoteException {
+		System.out.println("puls changed to " + newPulse.getFullAddress());
+		/*synchronized (pulse) {
+			synchronized (third) {
+				synchronized (pulseContact) {*/
+					if (third.equals(me))
+						third = newPulse;
+					
+					pulse = newPulse;
+					pulseContact = null;
+					
+					printStatus();
+				/*}
+			}
+		}		*/
 	}
 }
