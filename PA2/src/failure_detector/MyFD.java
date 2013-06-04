@@ -14,10 +14,15 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Date;
 import java.util.Enumeration;
+import java.util.Timer;
+import java.util.TimerTask;
 
+import failure_detector.data.FD;
+import failure_detector.data.JoinResponse;
 import failure_detector.data.Node;
-import failure_detector.data.Response;
+import failure_detector.data.PulseResponse;
 import failure_detector.interfaces.IMyFD;
 
 public class MyFD extends UnicastRemoteObject implements IMyFD {
@@ -30,22 +35,23 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 	private static final int MIN_PORT_NUMBER = 8000;
 	private static final int MAX_PORT_NUMBER = 10000;
 	private static final String DEFAULT_SERVICE_NAME = "PA2_MyFD";
+	private static final long TIMEOUT = 10000;
+	
 	private static int port;
 	private static String ServiceName = "";
 	private static String ConnectionURI = "";
 	private static String ContactServiceName = DEFAULT_SERVICE_NAME; 
 	
-	private static Node me;
-	private static Node first = null;
-	private static Node second = null;
-	private static Node third = null;
-	private static Node pulse = null;
-	
-	private static IMyFD pulseContact = null;
-	private static IMyFD contact = null;
+	private static FD fd = null;
 
+	private static Timer timer = null;
+	private static TimerTask timeoutTask = null;
+	
 	protected MyFD() throws RemoteException {
-		System.out.println("Initializing Node");
+		System.out.println(new Date() + " Initializing Node");
+		fd = new FD();
+		timer = new Timer();
+		timeoutTask = new TimeoutTask(fd);
 	}
 	
 	/**
@@ -65,29 +71,31 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 			MyFD myFD = new MyFD();
 			reg.rebind(ServiceName, myFD);       // Bind object
 			
-			System.out.println("Registered with registry");
+			System.out.println(new Date() + " Registered with registry");
 		} catch (RemoteException e) {
-			System.out.println("Error: " + e);
+			System.out.println(new Date() + " Error: " + e);
 		} // try
 		
 		NetworkInterface ni;
 		try {
 			ni = NetworkInterface.getByName("net4");
 			
-			me = new Node();
+			Node me = new Node();
 			me.setIP(ni.getInetAddresses().nextElement().getHostAddress());
 			me.setPort(port);
 			me.setServiceName(ServiceName);
 			
-			first = me;
-			second = me;
-			third = me;
+			fd.setMe(me);
+			fd.setFirst(me);
+			fd.setSecond(me);
+			fd.setThird(me);
+			fd.setPulse(me);
 			
-			System.out.println("created me {");
-			System.out.println("\t IP: " + me.getIP());
-			System.out.println("\t Port: " + me.getPort());
-			System.out.println("\t ServiceName: " + me.getServiceName());
-			System.out.println("}");
+			System.out.println(new Date() + " created me {");
+			System.out.println(new Date() + " \t IP: " + fd.getMe().getIP());
+			System.out.println(new Date() + " \t Port: " + fd.getMe().getPort());
+			System.out.println(new Date() + " \t ServiceName: " + fd.getMe().getServiceName());
+			System.out.println(new Date() + " }");
 		} catch (SocketException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -98,90 +106,23 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 						
 			if (args.length == 3 && !args[2].equals("${ContactServiceName}"))
 				ContactServiceName = args[2];
-			
+					
 			try {
-	        	System.out.println("Starting lookup for join");
-	        	contact = (IMyFD) Naming.lookup("rmi://" + ConnectionURI + "/" + ContactServiceName); 
-	        	System.out.println("Node found");
-	        	
-	        	System.out.println("contacting node " + ConnectionURI);
-	        	Response response = contact.JoinRequest(me);
-	        	
-	        	Node contactNode = new Node();
-	        	contactNode.setServiceName(ContactServiceName);
-	        	contactNode.setIP(ConnectionURI.split(":")[0]);
-	        	contactNode.setPort(Integer.parseInt(ConnectionURI.split(":")[1]));
-	        	
-	        	if (response.getFirst().equals(me) && response.getSecond().equals(contactNode)) {
-	        		first = contactNode;
-	        		pulse = contactNode;
-	        	} else if (response.getFirst().equals(me) && !response.getSecond().equals(contactNode)) {
-	        		// da bullshit!!!!!!
-	        		first = response.getSecond();
-	        		second = contactNode;
-	        		pulse = contactNode;
-	        	} else {
-	        		pulse = contactNode;
-	        		first = response.getSecond();
-	        	}
-	        	
-	        	printStatus();
-	        	
-	        } catch (NotBoundException e) {
-	        	System.out.println("Node was not found in registry");
-	        	System.exit(0);
-	        } catch (java.net.MalformedURLException e) { 
-	        	System.out.println("URL error: " + e); 
-	        	System.exit(0); 
-	        } catch (RemoteException e) { 
-	        	System.out.println("Time error: " + e); 
-	        	System.exit(0); 
-	        }
+				JoinThread jt = new JoinThread(ConnectionURI, ServiceName, fd);
+				jt.start();
+				jt.join();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			timer.schedule(timeoutTask, TIMEOUT);
 			
 		} else {
-			System.out.println("I'm the first one");
+			System.out.println(new Date() + " I'm the first one");
 		}
 		
-		
-		Thread generator = new Thread() {
-    		public void run() {
-    			System.out.println("started pulse generator thread");
-    			while (true) {
-    				if (pulse != null) {
-	    				synchronized (pulse) {
-							if (pulseContact == null) {
-			    				try {
-		    						pulseContact =  (IMyFD) Naming.lookup("rmi://" + pulse.getFullAddress() + "/" + ContactServiceName);
-		    						System.out.println("changed pulsecontact");
-								} catch (MalformedURLException | RemoteException | NotBoundException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								} 
-							}
-								
-							synchronized (pulseContact) {
-								Response msg = new Response();
-								msg.setFirst(first);
-								msg.setSecond(second);
-								try {
-									pulseContact.Pulse(msg);
-									System.out.println("sent pulse to " + pulse.getFullAddress());
-									
-									Thread.sleep(4000);
-								} catch (RemoteException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								} catch (InterruptedException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-			    			}
-						}
-					}
-    			}
-    			
-    		}
-    	};
+		Thread generator = new PulseGenerator(fd);
     	generator.start();
 	}
 	
@@ -195,22 +136,22 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 		try {
 			for (port = MIN_PORT_NUMBER; port <= MAX_PORT_NUMBER && !IsPortAvailable(port); port++);
 			
-			System.out.println("using port " + port);
+			System.out.println(new Date() + " using port " + port);
 			
 			reg = LocateRegistry.createRegistry(port);
 		} catch (IllegalArgumentException ae) {
-			System.out.println("No ports avilable");
+			System.out.println(new Date() + " No ports avilable");
 			System.exit(0);
 		} catch (RemoteException e) {
 			try {
 				reg = LocateRegistry.getRegistry(); 
 			} catch (RemoteException e2) {
-				System.out.println("Registry could not be established" + e);
+				System.out.println(new Date() + " Registry could not be established" + e);
 				System.exit(0);
 			} // try-catch-e2 
 		} // try-catch-e
 		
-		System.out.println("Registry established"); 
+		System.out.println(new Date() + " Registry established"); 
 		
 		return reg;
 	}
@@ -291,105 +232,105 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 	}
 
 	@Override
-	public Response JoinRequest(Node caller) throws RemoteException {
-		Response response = new Response();
+	public JoinResponse JoinRequest(Node caller) throws RemoteException {
+		JoinResponse response = new JoinResponse();
 		
-		System.out.println("getting join request from " + caller.getFullAddress());
+		System.out.println(new Date() + " getting join request from " + caller.getFullAddress());
 		
-		if (third.equals(me) && second.equals(me)) {
-			if (first.equals(me)) {
-				System.out.println("first join request");
-				pulse = caller;
-				first = caller;
+		response.setFirst(fd.getFirst());
+		response.setSecond(fd.getSecond());
+		response.setThird(fd.getThird());
+		
+		if (fd.getThird().equals(fd.getMe()) && fd.getSecond().equals(fd.getMe())) {
+			if (fd.getFirst().equals(fd.getMe())) {
+				System.out.println(new Date() + " first join request");
+				fd.setPulse(caller);
+				fd.setFirst(caller);
+				
+				timer.schedule(timeoutTask, TIMEOUT);
 			} else {
-				System.out.println("second join request");
+				System.out.println(new Date() + " second join request");
+				changePulse(fd.getFirst(), caller);
 				
-				try {
-					IMyFD prevFirst = (IMyFD) Naming.lookup("rmi://" + first.getFullAddress() + "/" + first.getServiceName());
-					
-					prevFirst.ChangePulse(caller);
-					
-					prevFirst = null;
-				} catch (MalformedURLException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (NotBoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				
-				second = first;
-				first = caller;
+				fd.setSecond(fd.getFirst());
+				fd.setFirst(caller);
 			}
 		} else {
-			try {
-				IMyFD prevFirst = (IMyFD) Naming.lookup("rmi://" + first.getFullAddress() + "/" + first.getServiceName());
-				
-				prevFirst.ChangePulse(caller);
-				
-				prevFirst = null;
-			} catch (MalformedURLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (NotBoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			if (!fd.getTimeout()) {
+				changePulse(fd.getFirst(), caller);
+				fd.setTimeout(false);
 			}
 			
-			third = second;
-			second = first;
-			first = caller;
+			fd.setThird(fd.getSecond());
+			fd.setSecond(fd.getFirst());
+			fd.setFirst(caller);
 		}
 		
-		response.setFirst(first);
-		response.setSecond(second);
-		
-		printStatus();
+		fd.printStatus();
 		
 		return response;
 	}
-
-	@Override
-	public void Pulse(Response msg) throws RemoteException {
-		System.out.println("got pulse");
-		
-		if (msg.getFirst().equals(me)) {
-			// only two nodes
-		} else if (msg.getSecond().equals(me) && third.equals(me) && !msg.getFirst().equals(pulse) && !msg.getFirst().equals(second)) {
-			pulse = msg.getFirst();
-			second = msg.getFirst();
-			printStatus();
-		} else {
-			second = msg.getFirst();
-			third = msg.getSecond();
-			printStatus();
+	
+	public static void changePulse(Node node, Node to) throws RemoteException {
+		try {
+			IMyFD prevFirst = (IMyFD) Naming.lookup("rmi://" + node.getFullAddress() + "/" + node.getServiceName());
+			
+			prevFirst.ChangePulse(to);
+			
+			prevFirst = null;
+		} catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NotBoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 
-	private static void printStatus() {
-		System.out.println("my status (" + me.getFullAddress() +") {");
-		System.out.println("\t first: " + first.getFullAddress());
-		System.out.println("\t second: " + second.getFullAddress());
-		System.out.println("\t third: " + third.getFullAddress());
-		System.out.println("\t pulse: " + pulse.getFullAddress());
-		System.out.println("}");
+	@Override
+	public void Pulse(PulseResponse msg) throws RemoteException {
+		System.out.println(new Date() + " got pulse from " + fd.getFirst().getFullAddress());
+		
+		timeoutTask.cancel();
+		timeoutTask = new TimeoutTask(fd);
+		timer.schedule(timeoutTask, TIMEOUT);
+		
+		if (msg.getFirst().equals(fd.getMe())) {
+			// only two nodes
+		} else if (msg.getSecond().equals(fd.getMe()) && fd.getThird().equals(fd.getMe()) && !msg.getFirst().equals(fd.getPulse()) && !msg.getFirst().equals(fd.getSecond())) {
+			fd.setPulse(msg.getFirst());
+			fd.setSecond(msg.getFirst());
+		} else {
+			fd.setSecond(msg.getFirst());
+			fd.setThird(msg.getSecond());
+		}
+		
+		
+		fd.printStatus();
+	}
+
+	
+	
+	@Override
+	public void ChangePulse(Node newPulse) throws RemoteException {
+		System.out.println(new Date() + " puls changed to " + newPulse.getFullAddress());
+		
+		if (fd.getThird().equals(fd.getMe()))
+			fd.setThird(newPulse);
+		
+		fd.setPulse(newPulse);
+		fd.setPulseContact(null);
+		
+		fd.printStatus();
 	}
 
 	@Override
-	public void ChangePulse(Node newPulse) throws RemoteException {
-		System.out.println("puls changed to " + newPulse.getFullAddress());
-		/*synchronized (pulse) {
-			synchronized (third) {
-				synchronized (pulseContact) {*/
-					if (third.equals(me))
-						third = newPulse;
-					
-					pulse = newPulse;
-					pulseContact = null;
-					
-					printStatus();
-				/*}
-			}
-		}		*/
+	public void Reconnect(Node caller) throws RemoteException {
+		System.out.println(new Date() + " got reconnect request from " + caller.getFullAddress());
+		
+		if (fd.getTimeout()) {
+			JoinThread jt = new JoinThread(caller.getFullAddress(), caller.getServiceName(), fd);
+			jt.start();
+		}
 	}
 }

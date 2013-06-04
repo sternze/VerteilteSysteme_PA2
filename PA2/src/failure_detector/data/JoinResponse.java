@@ -2,16 +2,11 @@ package failure_detector.data;
 
 import java.io.Serializable;
 
-public class PulseResponse implements Serializable {
-	
+public class JoinResponse implements Serializable {
+
 	private Node first;
 	private Node second;
-	private boolean forward;
-	
-	public PulseResponse() {
-		forward = false;
-	}
-	
+	private Node third;
 	public Node getFirst() {
 		return first;
 	}
@@ -24,11 +19,11 @@ public class PulseResponse implements Serializable {
 	public void setSecond(Node second) {
 		this.second = second;
 	}
-	public boolean isForward() {
-		return forward;
+	public Node getThird() {
+		return third;
 	}
-	public void setForward(boolean forward) {
-		this.forward = forward;
+	public void setThird(Node third) {
+		this.third = third;
 	}
 	
 	
