@@ -43,7 +43,8 @@ public class PulseGenerator extends Thread {
 				msg.setSecond(fd.getSecond());
 				try {
 					fd.getPulseContact().Pulse(msg);
-					System.out.println(new Date() + " sent pulse to  " + fd.getPulse().getFullAddress());
+					System.out.println(new Date() + " sent pulse to  " + fd.getPulse().getFullAddress() +
+									   " (" + msg.getFirst().getFullAddress() + ", " + msg.getSecond().getFullAddress() + ")");
 					
 					if (!fd.getTimeout() && c.getCounter() > 0)
 						c.resetCounter();

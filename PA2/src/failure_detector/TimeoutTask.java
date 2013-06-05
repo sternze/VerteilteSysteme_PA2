@@ -28,8 +28,15 @@ public class TimeoutTask extends TimerTask {
 		try {
 			IMyFD contact = (IMyFD) Naming.lookup("rmi://" + fd.getSecond().getFullAddress() + "/" + fd.getSecond().getServiceName());
 			System.out.println(new Date() + " Node found: " + fd.getSecond().getFullAddress());
-			contact.Reconnect(fd.getMe());
+			contact.ChangePulse(fd.getMe());
 			contact = null;
+			
+			synchronized (fd) {
+				fd.setFirst(fd.getSecond());
+				fd.setSecond(fd.getThird());
+				fd.setThird(fd.getMe());
+			}
+			
 			fd.setTimeout(true);
 		} catch (MalformedURLException | RemoteException | NotBoundException e) {
 			// TODO Auto-generated catch block

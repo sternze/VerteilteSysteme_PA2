@@ -244,26 +244,36 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 		if (fd.getThird().equals(fd.getMe()) && fd.getSecond().equals(fd.getMe())) {
 			if (fd.getFirst().equals(fd.getMe())) {
 				System.out.println(new Date() + " first join request");
-				fd.setPulse(caller);
-				fd.setFirst(caller);
+				
+				synchronized (fd) {
+					fd.setPulse(caller);
+					fd.setFirst(caller);
+				}
+				
+				response.setSecond(caller);
+				response.setThird(caller);
 				
 				timer.schedule(timeoutTask, TIMEOUT);
 			} else {
 				System.out.println(new Date() + " second join request");
 				changePulse(fd.getFirst(), caller);
 				
+				synchronized (fd) {
+					fd.setSecond(fd.getFirst());
+					fd.setFirst(caller);
+				}
+				
+				response.setThird(caller);
+			}
+		} else {
+			changePulse(fd.getFirst(), caller);
+			
+			synchronized (fd) {
+				fd.setThird(fd.getSecond());
 				fd.setSecond(fd.getFirst());
 				fd.setFirst(caller);
 			}
-		} else {
-			if (!fd.getTimeout()) {
-				changePulse(fd.getFirst(), caller);
-				fd.setTimeout(false);
-			}
 			
-			fd.setThird(fd.getSecond());
-			fd.setSecond(fd.getFirst());
-			fd.setFirst(caller);
 		}
 		
 		fd.printStatus();
@@ -289,20 +299,19 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 
 	@Override
 	public void Pulse(PulseResponse msg) throws RemoteException {
-		System.out.println(new Date() + " got pulse from " + fd.getFirst().getFullAddress());
+		System.out.println(new Date() + " got pulse (" + msg.getFirst().getFullAddress() + ", " + msg.getSecond().getFullAddress() + ")");
 		
 		timeoutTask.cancel();
 		timeoutTask = new TimeoutTask(fd);
 		timer.schedule(timeoutTask, TIMEOUT);
 		
 		if (msg.getFirst().equals(fd.getMe())) {
-			// only two nodes
-		} else if (msg.getSecond().equals(fd.getMe()) && fd.getThird().equals(fd.getMe()) && !msg.getFirst().equals(fd.getPulse()) && !msg.getFirst().equals(fd.getSecond())) {
-			fd.setPulse(msg.getFirst());
-			fd.setSecond(msg.getFirst());
+			//only two nodes
 		} else {
-			fd.setSecond(msg.getFirst());
-			fd.setThird(msg.getSecond());
+			synchronized (fd) {
+				fd.setSecond(msg.getFirst());
+				fd.setThird(msg.getSecond());
+			}
 		}
 		
 		
@@ -315,11 +324,18 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 	public void ChangePulse(Node newPulse) throws RemoteException {
 		System.out.println(new Date() + " puls changed to " + newPulse.getFullAddress());
 		
-		if (fd.getThird().equals(fd.getMe()))
-			fd.setThird(newPulse);
-		
-		fd.setPulse(newPulse);
-		fd.setPulseContact(null);
+		synchronized (fd) {		
+			if (fd.getSecond().equals(fd.getMe())) {
+				fd.setSecond(newPulse);
+			}
+				
+			if (fd.getThird().equals(fd.getMe())) {
+				fd.setThird(newPulse);
+			}
+				
+			fd.setPulse(newPulse);
+			fd.setPulseContact(null);
+		}
 		
 		fd.printStatus();
 	}

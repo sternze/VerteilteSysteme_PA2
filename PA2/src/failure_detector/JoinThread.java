@@ -39,11 +39,13 @@ public class JoinThread extends Thread {
         	contactNode.setIP(connectionURI.split(":")[0]);
         	contactNode.setPort(Integer.parseInt(connectionURI.split(":")[1]));
         	
-			fd.setFirst(response.getFirst());
-        	fd.setSecond(response.getSecond());
-        	fd.setThird(response.getThird());
-        	fd.setPulse(contactNode);
-        	fd.setPulseContact(null);
+        	synchronized (fd) {
+        		fd.setFirst(response.getFirst());
+            	fd.setSecond(response.getSecond());
+            	fd.setThird(response.getThird());
+            	fd.setPulse(contactNode);
+            	fd.setPulseContact(null);
+			}
         	
         	fd.printStatus();
         	
