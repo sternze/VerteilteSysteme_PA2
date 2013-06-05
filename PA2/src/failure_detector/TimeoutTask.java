@@ -38,7 +38,27 @@ public class TimeoutTask extends TimerTask {
 			}
 			
 			fd.setTimeout(true);
-		} catch (MalformedURLException | RemoteException | NotBoundException e) {
+		} catch (RemoteException re) {
+			try {
+				IMyFD contact = (IMyFD) Naming.lookup("rmi://" + fd.getThird().getFullAddress() + "/" + fd.getThird().getServiceName());
+				System.out.println(new Date() + " Node found: " + fd.getThird().getFullAddress());
+				contact.ChangePulse(fd.getMe());
+				contact = null;
+				
+				synchronized (fd) {
+					fd.setFirst(fd.getSecond());
+					fd.setSecond(fd.getThird());
+					fd.setThird(fd.getMe());
+				}
+				
+				fd.setTimeout(true);
+			} catch (RemoteException re2) {
+				System.out.println("cant recover: more than two nodes crashed");
+			} catch (MalformedURLException | NotBoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} 
+		} catch (MalformedURLException | NotBoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
