@@ -14,13 +14,17 @@ public class Node implements Serializable {
 	private Node predecessor;
 	private int keysize;
 	
-	public Node() { }
+	public Node(int keysize) {
+		port = 0;
+		IP = null;
+		this.keysize = keysize;
+	}
 	
 	public Node(String ip, int Port, int keysize) {
-		this.ChordIdentifier = getChordID(ip + "" + port);
+		this.keysize = keysize;
+		this.ChordIdentifier = getChordID(ip + ":" + Port);
 		this.IP = ip;
 		this.port = Port;
-		this.keysize = keysize;
 	}
 	
 	private long getChordID(String IpAndPort) {
@@ -31,7 +35,14 @@ public class Node implements Serializable {
 			md = MessageDigest.getInstance("SHA-1");
 			byte[] bla = md.digest(IpAndPort.getBytes());
 			
-			chordID = ByteBuffer.wrap(bla).getLong() % (long)Math.pow(2, keysize);
+			long number = ByteBuffer.wrap(bla).getLong();
+			
+			long mod = (long)Math.pow(2, keysize);
+			
+			chordID = number % mod;
+			if(chordID < 0) {
+				chordID += (long)Math.pow(2, keysize);
+			}
 			
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
@@ -55,6 +66,10 @@ public class Node implements Serializable {
 	
 	public void setIP(String iP) {
 		IP = iP;
+		
+		if(this.port != 0) {
+			this.ChordIdentifier = getChordID(this.IP + ":" + this.port);
+		}
 	}
 	
 	public int getPort() {
@@ -63,6 +78,10 @@ public class Node implements Serializable {
 	
 	public void setPort(int port) {
 		this.port = port;
+
+		if(this.IP != null) {
+			this.ChordIdentifier = getChordID(this.IP + ":" + this.port);
+		}
 	}
 
 	public String getServiceName() {

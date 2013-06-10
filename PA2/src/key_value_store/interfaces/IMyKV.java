@@ -7,8 +7,8 @@ import key_value_store.data.Node;
 
 
 public interface IMyKV extends Remote {
-	public Node findSuccessor(int searchID) throws RemoteException;
-	public Node findPredecessor(int searchID) throws RemoteException;
+	public Node findSuccessor(long l) throws RemoteException;
+	public Node findPredecessor(long searchID) throws RemoteException;
 	public Node getClosestPrecedingFinger(long searchID) throws RemoteException;
 	public void updateFingerTable(Node newNode, int index) throws RemoteException;
 }

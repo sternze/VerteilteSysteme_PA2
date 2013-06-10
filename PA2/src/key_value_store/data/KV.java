@@ -18,10 +18,12 @@ import key_value_store.MyKV;
 public class KV {
 	private Node me;
 	private FingerTable fingerTable;
+	private int keySize;
 	
 	public KV(Node myNode, int keySize) {
 		fingerTable = new FingerTable(keySize);
 		me = myNode;
+		this.keySize = keySize;
 	}
 
 	public Node getMe() {
@@ -33,7 +35,7 @@ public class KV {
 	}
 	
 	public Node getClosestPrecedingFinger(long searchID) {
-		for(int i = fingerTable.length(); i > 0; i--) {
+		for(int i = fingerTable.length()-1; i >= 0; i--) {
 			Node tmpNode = fingerTable.get(i).getNode();
 			if(tmpNode != null && tmpNode.getChordIdentifier() > me.getChordIdentifier() && tmpNode.getChordIdentifier() < searchID) {
 				return tmpNode;
@@ -62,18 +64,22 @@ public class KV {
 		return pred;
 	}
 	
-	public Node findSuccessor(int searchId, String serviceName) {
+	public Node findSuccessor(long searchId, String serviceName) {
 		Node n = findPredecessor(searchId, serviceName);
 		return n.getSuccessor();
 	}
 
 	public void Join(Node nodeToJoinTo, String serviceName) {
-		System.out.println("joining node " + nodeToJoinTo.getChordIdentifier());
+		FingerTableEntry successor = new FingerTableEntry();
+		successor.setStart(calculateStart(me, 1));
+		fingerTable.setFingerTableEntry(successor, 0);
 		if(nodeToJoinTo != null) {
+			System.out.println("joining node " + nodeToJoinTo.getChordIdentifier());
 			initFingerTable(nodeToJoinTo, serviceName);
 			updateOthers(serviceName);
 		} else {
 			// I'm the only node in the network.
+			System.out.println("I'm the only one in the network.");
 			for(int i = 0; i < fingerTable.length(); i++) {
 				FingerTableEntry fte = new FingerTableEntry();
 				fte.setNode(me);
@@ -82,6 +88,10 @@ public class KV {
 			
 			me.setPredecessor(me);
 		}
+	}
+
+	private long calculateStart(Node me2, int I_th_Entry) {
+		return (long)((me.getChordIdentifier() + (long)Math.pow(2, I_th_Entry-1)) % Math.pow(2, keySize));
 	}
 
 	private void updateOthers(String serviceName) {

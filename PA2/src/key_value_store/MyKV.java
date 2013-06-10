@@ -2,6 +2,8 @@ package key_value_store;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
@@ -12,7 +14,9 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Collections;
 import java.util.Date;
+import java.util.Enumeration;
 
 import key_value_store.data.KV;
 import key_value_store.data.Node;
@@ -72,8 +76,11 @@ public class MyKV extends UnicastRemoteObject implements IMyKV {
 		try {
 			ni = NetworkInterface.getByName("net4");
 			
-			Node me = new Node();
-			me.setIP(ni.getInetAddresses().nextElement().getHostAddress());
+			Node me = new Node(KEYLENGTH);
+			
+//			String address = ni.getInetAddresses().nextElement().getHostAddress();
+//			String address1 = ni.getInetAddresses().nextElement().getHostAddress();
+			me.setIP(getIPAdressOfNic("net4"));
 			me.setPort(port);
 			me.setServiceName(ServiceName);
 			
@@ -96,8 +103,25 @@ public class MyKV extends UnicastRemoteObject implements IMyKV {
 			Join(new Node(ConnectionURI.split(":")[0], Integer.parseInt(ConnectionURI.split(":")[1]), KEYLENGTH));      	
 			
 		} else {
-			System.out.println(new Date() + " I'm the first one");
+			Join(null);
 		}
+	}
+	
+	private static String getIPAdressOfNic(String NIC_Name) {
+		String IP = null;
+		try {
+			NetworkInterface ni = NetworkInterface.getByName(NIC_Name);
+			
+		    Enumeration<InetAddress> addresses = ni.getInetAddresses();
+		    while (addresses.hasMoreElements()){
+		        InetAddress current_addr = addresses.nextElement();
+		        if (current_addr.isLoopbackAddress() || !(current_addr instanceof Inet4Address))
+		        	continue;
+		        IP = current_addr.getHostAddress();
+		    }
+		} catch(Exception ex) { }
+		
+		return IP;
 	}
 	
 	
@@ -136,7 +160,7 @@ public class MyKV extends UnicastRemoteObject implements IMyKV {
 	}
 	
 	
-	public Node findSuccessor(int searchID) {
+	public Node findSuccessor(long searchID) {
 		return myKV.findSuccessor(searchID, ServiceName);
 	}
 
@@ -144,7 +168,7 @@ public class MyKV extends UnicastRemoteObject implements IMyKV {
 		return myKV.getClosestPrecedingFinger(searchID);
 	}
 
-	public Node findPredecessor(int searchID) {
+	public Node findPredecessor(long searchID) {
 		return myKV.findPredecessor(searchID, ServiceName);
 	}
 	

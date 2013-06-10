@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FingerTable {
-	FingerTableEntry[] entries;
+	private FingerTableEntry[] entries;
 	
 	public FingerTable(int keysize) {
 		this.entries = new FingerTableEntry[keysize];

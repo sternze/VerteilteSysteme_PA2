@@ -2,9 +2,9 @@ package key_value_store.data;
 
 
 public class FingerTableEntry {
-	private int start;
-	private int intervalUpperBound;
-	private int intervalLowerBound;
+	private long start;
+	private long intervalUpperBound;
+	private long intervalLowerBound;
 	private Node node;
 	
 	public FingerTableEntry() { }
@@ -13,15 +13,15 @@ public class FingerTableEntry {
 		
 	}
 	
-	public int getStart() {
+	public long getStart() {
 		return start;
 	}
 
-	public void setStart(int start) {
+	public void setStart(long start) {
 		this.start = start;
 	}
 
-	public boolean isInInterval(int val) {
+	public boolean isInInterval(long val) {
 		return (val > intervalLowerBound && val < intervalUpperBound);
 	}
 
@@ -34,22 +34,22 @@ public class FingerTableEntry {
 	}
 
 
-	public int getIntervalUpperBound() {
+	public long getIntervalUpperBound() {
 		return intervalUpperBound;
 	}
 
 
-	public void setIntervalUpperBound(int intervalUpperBound) {
+	public void setIntervalUpperBound(long intervalUpperBound) {
 		this.intervalUpperBound = intervalUpperBound;
 	}
 
 
-	public int getIntervalLowerBound() {
+	public long getIntervalLowerBound() {
 		return intervalLowerBound;
 	}
 
 
-	public void setIntervalLowerBound(int intervalLowerBound) {
+	public void setIntervalLowerBound(long intervalLowerBound) {
 		this.intervalLowerBound = intervalLowerBound;
 	}
 	
