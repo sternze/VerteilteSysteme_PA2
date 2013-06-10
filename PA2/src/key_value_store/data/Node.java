@@ -1,10 +1,11 @@
 package key_value_store.data;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-public class Node {
+public class Node implements Serializable {
 	private long ChordIdentifier;
 	private String IP;
 	private int port;
