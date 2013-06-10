@@ -9,7 +9,7 @@ public class FingerTable {
 	public FingerTable(int keysize) {
 		this.entries = new FingerTableEntry[keysize];
 		for(int i = 0; i < this.entries.length; i++) {
-			this.entries[i] = null;
+			this.entries[i] = new FingerTableEntry();
 		}
 	}
 

@@ -35,7 +35,7 @@ public class KV {
 	public Node getClosestPrecedingFinger(long searchID) {
 		for(int i = fingerTable.length(); i > 0; i--) {
 			Node tmpNode = fingerTable.get(i).getNode();
-			if(tmpNode.getChordIdentifier() > me.getChordIdentifier() && tmpNode.getChordIdentifier() < searchID) {
+			if(tmpNode != null && tmpNode.getChordIdentifier() > me.getChordIdentifier() && tmpNode.getChordIdentifier() < searchID) {
 				return tmpNode;
 			}
 		}		
@@ -68,6 +68,7 @@ public class KV {
 	}
 
 	public void Join(Node nodeToJoinTo, String serviceName) {
+		System.out.println("joining node " + nodeToJoinTo.getChordIdentifier());
 		if(nodeToJoinTo != null) {
 			initFingerTable(nodeToJoinTo, serviceName);
 			updateOthers(serviceName);

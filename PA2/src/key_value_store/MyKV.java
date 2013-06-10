@@ -2,21 +2,19 @@ package key_value_store;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
+import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.SocketException;
+import java.rmi.Naming;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
-import key_value_store.data.FingerTable;
-import key_value_store.data.FingerTableEntry;
 import key_value_store.data.KV;
-import key_value_store.data.MyValue;
 import key_value_store.data.Node;
 import key_value_store.interfaces.IMyKV;
 
@@ -79,10 +77,26 @@ public class MyKV extends UnicastRemoteObject implements IMyKV {
 			me.setPort(port);
 			me.setServiceName(ServiceName);
 			
+			System.out.println(new Date() + " created me {");
+			System.out.println(new Date() + " \t IP: " + me.getIP());
+			System.out.println(new Date() + " \t Port: " + me.getPort());
+			System.out.println(new Date() + " \t ServiceName: " + me.getServiceName());
+			System.out.println(new Date() + " \t ChordIdentifier: " + me.getChordIdentifier());
+			System.out.println(new Date() + " }");
+			
 			myKV = new KV(me, KEYLENGTH);
 		} catch (SocketException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
+		}
+		
+		if (args.length >= 1 && !args[1].equals("${NodeIP:Port}")) {
+			ConnectionURI = args[1];
+						
+			Join(new Node(ConnectionURI.split(":")[0], Integer.parseInt(ConnectionURI.split(":")[1]), KEYLENGTH));      	
+			
+		} else {
+			System.out.println(new Date() + " I'm the first one");
 		}
 	}
 	
@@ -117,7 +131,7 @@ public class MyKV extends UnicastRemoteObject implements IMyKV {
 		return reg;
 	}
 	
-	private void Join(Node nodeToJoinTo) {
+	private static void Join(Node nodeToJoinTo) {
 		myKV.Join(nodeToJoinTo, ServiceName);
 	}
 	
