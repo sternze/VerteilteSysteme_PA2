@@ -1,7 +1,6 @@
 package failure_detector.data;
 
 import java.io.Serializable;
-import java.net.InetAddress;
 
 public class Node implements Serializable {
 
@@ -31,6 +30,7 @@ public class Node implements Serializable {
 	public String getFullAddress() {
 		return IP + ":" + port;
 	}
+	
 	@Override
 	public boolean equals(Object obj) {
 		if (obj == null) {
