@@ -168,14 +168,17 @@ public class MyKV extends UnicastRemoteObject implements IMyKV {
 	
 	
 	public Node findSuccessor(long searchID) {
+		System.out.println(new Date() + "Someone wants to get my successor");
 		return myKV.findSuccessor(searchID, ServiceName);
 	}
 
 	public Node getClosestPrecedingFinger(long searchID) {
+		System.out.println(new Date() + "Someone wants to get my Closest Preceding Finger");
 		return myKV.getClosestPrecedingFinger(searchID);
 	}
 
 	public Node findPredecessor(long searchID) {
+		System.out.println(new Date() + "Someone wants to get my Predecessor");
 		return myKV.findPredecessor(searchID, ServiceName);
 	}
 	

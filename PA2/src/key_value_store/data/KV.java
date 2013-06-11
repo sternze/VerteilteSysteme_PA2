@@ -1,19 +1,12 @@
 package key_value_store.data;
 
 import java.net.MalformedURLException;
-import java.net.NetworkInterface;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.Date;
 
-import failure_detector.data.JoinResponse;
-import failure_detector.interfaces.IMyFD;
-
-import key_value_store.data.Node;
 import key_value_store.interfaces.IMyKV;
-
-import key_value_store.MyKV;
 
 public class KV {
 	private Node me;
@@ -76,28 +69,24 @@ public class KV {
 	}
 
 	public void Join(Node nodeToJoinTo, String serviceName) {
-		FingerTableEntry successor = new FingerTableEntry();
-		successor.setStart(calculateStart(me, 0));
-		fingerTable.setFingerTableEntry(successor, 0);
+		System.out.println("I'm the only one in the network.");
+		FingerTableEntry fte = new FingerTableEntry();
+		fte.setNode(me);
+		fte.setStart(calculateStart(me, 0));
+		fingerTable.setSuccessor(fte);
+		me.setPredecessor(null);
+		
+		
 		if(nodeToJoinTo != null) {
 			System.out.println("joining node " + nodeToJoinTo.getChordIdentifier());
 			initFingerTable(nodeToJoinTo, serviceName);
 			updateOthers(serviceName);
-		} else {
-			// I'm the only node in the network.
-			System.out.println("I'm the only one in the network.");
-			for(int i = 1; i < fingerTable.length(); i++) {
-				FingerTableEntry fte = new FingerTableEntry();
-				fte.setNode(me);
-				fingerTable.setFingerTableEntry(fte, i);
-			}
-			
-			me.setPredecessor(me);
 		}
+		System.out.println("join finished");
 	}
 
 	private long calculateStart(Node me2, int I_th_Entry) {
-		return (long)((me.getChordIdentifier() + (long)Math.pow(2, I_th_Entry)) % Math.pow(2, keySize));
+		return (long)((me2.getChordIdentifier() + (long)Math.pow(2, I_th_Entry)) % Math.pow(2, keySize));
 	}
 
 	private void updateOthers(String serviceName) {
@@ -147,7 +136,8 @@ public class KV {
     					&& fingerTable.get(i+1).getStart() < fingerTable.get(i).getNode().getChordIdentifier()) {
     				fingerTable.get(i+1).setNode(fingerTable.get(i).getNode());
     			} else {
-    				fingerTable.get(i+1).setNode(contact.findSuccessor(fingerTable.get(i+1).getStart()));
+    				Node contactSucc = contact.findSuccessor(fingerTable.get(i+1).getStart());
+    				fingerTable.get(i+1).setNode(contactSucc);
     			}
 				fingerTable.get(i+1).setStart(calculateStart(fingerTable.get(i+1).getNode(), i+1));
 				fingerTable.get(i+1).setIntervalLowerBound(fingerTable.get(i).getStart());
