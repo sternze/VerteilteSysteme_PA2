@@ -24,6 +24,7 @@ public class KV {
 		fingerTable = new FingerTable(keySize);
 		me = myNode;
 		this.keySize = keySize;
+		create();
 	}
 
 	public Node getMe() {
@@ -37,7 +38,7 @@ public class KV {
 	public Node getClosestPrecedingFinger(long searchID) {
 		for(int i = fingerTable.length()-1; i >= 0; i--) {
 			Node tmpNode = fingerTable.get(i).getNode();
-			if(tmpNode != null && tmpNode.getChordIdentifier() > me.getChordIdentifier() && tmpNode.getChordIdentifier() < searchID) {
+			if(tmpNode != null && (tmpNode.getChordIdentifier() == me.getChordIdentifier() || tmpNode.getChordIdentifier() == searchID)) {
 				return tmpNode;
 			}
 		}		
@@ -46,15 +47,20 @@ public class KV {
 
 	public Node findPredecessor(long searchId, String serviceName) {
 		Node pred = me;
-		while(searchId <= pred.getChordIdentifier() || searchId > pred.getSuccessor().getChordIdentifier()) {
+		
+		while(searchId > pred.getChordIdentifier() && searchId <= pred.getSuccessor().getChordIdentifier()) {
+			System.out.println(new Date() + " (" + searchId + ", " + pred.getChordIdentifier() + ", " + pred.getSuccessor().getChordIdentifier() + ")");
 			System.out.println(new Date() + " Getting closest preceding finger of node " + pred.getChordIdentifier());
 			try {
 				IMyKV contact = (IMyKV) Naming.lookup("rmi://" + pred.getIP() + ":" + pred.getPort() + "/" + serviceName);
 	        	System.out.println(new Date() + " Node found: " + pred.getIP() + ":" + pred.getPort());
 	        	
 	        	System.out.println(new Date() + " contacting node " + pred.getIP() + ":" + pred.getPort());
-	        	contact.getClosestPrecedingFinger(searchId);
+	        	pred = contact.getClosestPrecedingFinger(searchId);
+	        	
+	        	System.out.println(new Date() + " got (" + pred.getChordIdentifier() + ")");
 	        	contact = null;
+	        	
 			} catch (MalformedURLException | RemoteException
 					| NotBoundException e) {
 				// TODO Auto-generated catch block
@@ -120,7 +126,17 @@ public class KV {
 
         	System.out.println(new Date() + " contacting node " + nodeToJoinTo.getIP() + ":" + nodeToJoinTo.getPort());
         	
-        	successor.setNode(contact.findSuccessor(successor.getStart()));
+        	try {
+    			Thread.sleep(2000);
+    		} catch (InterruptedException e) {
+    			// TODO Auto-generated catch block
+    			e.printStackTrace();
+    		}
+        	
+        	Node succ = contact.findSuccessor(successor.getStart());
+        	successor.setNode(succ);
+        	
+        	System.out.println("got successor " + succ.getChordIdentifier());
     		
     		me.setPredecessor(successor.getNode().getPredecessor());
     		successor.getNode().setPredecessor(me);
@@ -145,8 +161,7 @@ public class KV {
 	}
 
 	public void updateFingerTable(Node newNode, int index, String serviceName) {
-		if(newNode.getChordIdentifier() >= me.getChordIdentifier()
-				&& newNode.getChordIdentifier() < fingerTable.get(index).getNode().getChordIdentifier()) {
+		if(newNode.getChordIdentifier() >= me.getChordIdentifier() && newNode.getChordIdentifier() < fingerTable.get(index).getNode().getChordIdentifier()) {
 			FingerTableEntry fte = new FingerTableEntry();
 			fte.setNode(newNode);			
 			fingerTable.setFingerTableEntry(fte, index);
@@ -166,7 +181,11 @@ public class KV {
 				e.printStackTrace();
 			}
 		}
-		
+	}
+	
+	private void create() {
+		me.setPredecessor(null);
+		me.setSuccessor(me);
 	}
 	
 	

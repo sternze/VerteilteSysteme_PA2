@@ -97,6 +97,13 @@ public class MyKV extends UnicastRemoteObject implements IMyKV {
 			e1.printStackTrace();
 		}
 		
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		if (args.length >= 1 && !args[1].equals("${NodeIP:Port}")) {
 			ConnectionURI = args[1];
 						
