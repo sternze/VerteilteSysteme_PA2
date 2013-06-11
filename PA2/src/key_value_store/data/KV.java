@@ -77,7 +77,7 @@ public class KV {
 
 	public void Join(Node nodeToJoinTo, String serviceName) {
 		FingerTableEntry successor = new FingerTableEntry();
-		successor.setStart(calculateStart(me, 1));
+		successor.setStart(calculateStart(me, 0));
 		fingerTable.setFingerTableEntry(successor, 0);
 		if(nodeToJoinTo != null) {
 			System.out.println("joining node " + nodeToJoinTo.getChordIdentifier());
@@ -86,7 +86,7 @@ public class KV {
 		} else {
 			// I'm the only node in the network.
 			System.out.println("I'm the only one in the network.");
-			for(int i = 0; i < fingerTable.length(); i++) {
+			for(int i = 1; i < fingerTable.length(); i++) {
 				FingerTableEntry fte = new FingerTableEntry();
 				fte.setNode(me);
 				fingerTable.setFingerTableEntry(fte, i);
@@ -97,7 +97,7 @@ public class KV {
 	}
 
 	private long calculateStart(Node me2, int I_th_Entry) {
-		return (long)((me.getChordIdentifier() + (long)Math.pow(2, I_th_Entry-1)) % Math.pow(2, keySize));
+		return (long)((me.getChordIdentifier() + (long)Math.pow(2, I_th_Entry)) % Math.pow(2, keySize));
 	}
 
 	private void updateOthers(String serviceName) {
@@ -140,6 +140,7 @@ public class KV {
     		
     		me.setPredecessor(successor.getNode().getPredecessor());
     		successor.getNode().setPredecessor(me);
+    		successor.setStart(calculateStart(succ, 0));
     		
     		for(int i = 0; i < fingerTable.length()-1; i++) {
     			if(fingerTable.get(i+1).getStart() >= me.getChordIdentifier()
@@ -148,6 +149,9 @@ public class KV {
     			} else {
     				fingerTable.get(i+1).setNode(contact.findSuccessor(fingerTable.get(i+1).getStart()));
     			}
+				fingerTable.get(i+1).setStart(calculateStart(fingerTable.get(i+1).getNode(), i+1));
+				fingerTable.get(i+1).setIntervalLowerBound(fingerTable.get(i).getStart());
+				fingerTable.get(i+1).setIntervalUpperBound(fingerTable.get(i+1).getStart());
     		}
         	
         	contact = null;
