@@ -56,11 +56,11 @@ public class PulseGenerator extends Thread {
 				} catch (RemoteException e) {
 					if(!warningShown) {
 						System.out.println(new Date() + " can't contact pulse : " + fd.getPulse().getFullAddress());
+						System.out.println(new Date() + " Timeout");
 						c.add();
 						
 						if (c.getCounter() >= 3) {
 							fd.setTimeout(true);
-							System.out.println(new Date() + " possible timeout detected");
 						}
 						warningShown = true;
 					}
