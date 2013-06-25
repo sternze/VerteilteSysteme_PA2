@@ -22,7 +22,7 @@ public class TimeoutTask extends TimerTask {
 	
 	@Override
 	public void run() {
-		System.out.println(new Date() + " Timout");
+		System.out.println(new Date() + " Timeout detected!");
 		System.out.println(new Date() + " Starting lookup for reconnect");
 		
 		try {

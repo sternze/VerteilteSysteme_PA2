@@ -299,7 +299,7 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 
 	@Override
 	public void Pulse(PulseResponse msg) throws RemoteException {
-		System.out.println(new Date() + " got pulse (" + msg.getFirst().getFullAddress() + ", " + msg.getSecond().getFullAddress() + ")");
+//		System.out.println(new Date() + " got pulse (" + msg.getFirst().getFullAddress() + ", " + msg.getSecond().getFullAddress() + ")");
 		
 		timeoutTask.cancel();
 		timeoutTask = new TimeoutTask(fd);

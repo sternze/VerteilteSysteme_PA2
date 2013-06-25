@@ -24,6 +24,7 @@ public class PulseGenerator extends Thread {
 	@Override
 	public void run() {
 		System.out.println(new Date() + " started pulse generator thread");
+		boolean warningShown = false;
 		while (true) {
 			if (fd.getPulse() != null && !fd.getPulse().equals(fd.getMe())) {
 				if (fd.getPulseContact() == null) {
@@ -46,19 +47,23 @@ public class PulseGenerator extends Thread {
 					System.out.println(new Date() + " sent pulse to  " + fd.getPulse().getFullAddress() +
 									   " (" + msg.getFirst().getFullAddress() + ", " + msg.getSecond().getFullAddress() + ")");
 					
-					if (!fd.getTimeout() && c.getCounter() > 0)
+					if (!fd.getTimeout() && c.getCounter() > 0) {
 						c.resetCounter();
+						warningShown = false;
+					}
 					
 					Thread.sleep(4000);
 				} catch (RemoteException e) {
-					System.out.println(new Date() + " can't contact pulse : " + fd.getPulse().getFullAddress());
-					c.add();
-					
-					if (c.getCounter() >= 3) {
-						fd.setTimeout(true);
-						System.out.println(new Date() + " possible timeout detected");
+					if(!warningShown) {
+						System.out.println(new Date() + " can't contact pulse : " + fd.getPulse().getFullAddress());
+						c.add();
+						
+						if (c.getCounter() >= 3) {
+							fd.setTimeout(true);
+							System.out.println(new Date() + " possible timeout detected");
+						}
+						warningShown = true;
 					}
-					
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
