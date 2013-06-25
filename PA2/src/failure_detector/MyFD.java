@@ -315,7 +315,7 @@ public class MyFD extends UnicastRemoteObject implements IMyFD {
 		}
 		
 		
-		fd.printStatus();
+//		fd.printStatus();
 	}
 
 	
